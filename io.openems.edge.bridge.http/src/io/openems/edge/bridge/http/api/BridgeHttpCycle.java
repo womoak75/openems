@@ -298,5 +298,33 @@ public interface BridgeHttpCycle {
 	) {
 		this.subscribeJsonCycle(1, url, r -> action.accept(r, null), t -> action.accept(null, t));
 	}
+	
+	/**
+	 * Subscribes to one http endpoint.
+	 * 
+	 * <p>
+	 * Tries to fetch data every cycle. If receiving data takes more than a cycle
+	 * the next get request to the url gets send when the last was finished either
+	 * successfully or with an error.
+	 * 
+	 * @param Endpoint the endpoint {@link Endpoint}
+	 * @param action   the action to perform; the first is the result of the endpoint
+	 *                 if existing and the second argument is passed if an error
+	 *                 happend. One of the params is always null and one not
+	 */
+	public default void subscribeJsonEveryCycle(//
+			final Endpoint endpoint, //
+			final BiConsumer<JsonElement, Throwable> action //
+	) {
+		this.subscribeCycle(new CycleEndpoint(1, endpoint, t -> {
+			try {
+				action.accept(JsonUtils.parse(t),null);
+			} catch (Exception e) {
+				action.accept(null,e);
+			}
+		},th -> {
+			action.accept(null, th);
+		}));	
+	}
 
 }
