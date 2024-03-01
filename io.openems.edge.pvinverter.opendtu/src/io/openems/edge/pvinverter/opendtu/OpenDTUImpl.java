@@ -232,12 +232,10 @@ public class OpenDTUImpl extends AbstractOpenemsComponent implements OpenDTU, Ma
 	}
 
 	private void handleSetLimitResponse(InverterResponse response) {
-		if(response.isOK()) {
-			requestActPowerLimit();
-		} else {
-			// what to do? 
+		if(!response.isOK()) {
 			logger.warn("set limit request error: {} {}",response.getCode(),response.getMessage());
 		}
+		requestActPowerLimit();
 	} 
 
 	@Deactivate
