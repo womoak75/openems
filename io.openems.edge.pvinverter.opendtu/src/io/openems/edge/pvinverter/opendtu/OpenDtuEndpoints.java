@@ -1,12 +1,13 @@
 package io.openems.edge.pvinverter.opendtu;
 
-import io.openems.edge.bridge.http.api.HttpMethod;
-
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.google.gson.JsonObject;
+
 import io.openems.edge.bridge.http.api.BridgeHttp.Endpoint;
+import io.openems.edge.bridge.http.api.HttpMethod;
 
 public class OpenDtuEndpoints {
 	
@@ -55,13 +56,8 @@ public class OpenDtuEndpoints {
 		return new Endpoint(getBaseUrl()+"/api/limit/status", HttpMethod.GET, this.connectTimeout, this.readTimeoute, null, authPropertiesMap());
 	}
 	
-	public Endpoint getLimitSetEndpoint(String inverterId, int limit) {
-		var body = getLimitSetBody(inverterId, limit);
-		return new Endpoint(getBaseUrl()+"/api/limit/config", HttpMethod.POST, this.connectTimeout, this.readTimeoute, body, authPropertiesMap());
-	}
-	
-	private String getLimitSetBody(String inverterId, int percent) {
-		return "data={\"serial\":\""+inverterId+"\",\"limit_type\":1, \"limit_value\":"+percent+"}";
+	public Endpoint getLimitSetEndpoint(final JsonObject jsonObject) {
+		return new Endpoint(getBaseUrl()+"/api/limit/config", HttpMethod.POST, this.connectTimeout, this.readTimeoute, jsonObject.toString(), authPropertiesMap());
 	}
 	
 	private Map<String, String> authPropertiesMap() {

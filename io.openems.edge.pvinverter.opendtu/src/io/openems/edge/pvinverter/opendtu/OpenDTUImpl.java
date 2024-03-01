@@ -24,7 +24,9 @@ import io.openems.edge.meter.api.ElectricityMeter;
 import io.openems.edge.meter.api.MeterType;
 import io.openems.edge.meter.api.SinglePhase;
 import io.openems.edge.pvinverter.api.ManagedSymmetricPvInverter;
+import io.openems.edge.pvinverter.opendtu.OpenDTUInverterLimitModel.InverterSetLimit;
 import io.openems.edge.pvinverter.opendtu.OpenDTUModel.AC;
+import io.openems.edge.pvinverter.opendtu.OpenDTUModel.InverterResponse;
 import io.openems.edge.pvinverter.opendtu.OpenDTUModel.OpenDTUInverter;
 
 @Designate(ocd = Config.class, factory = true)
@@ -75,6 +77,11 @@ public class OpenDTUImpl extends AbstractOpenemsComponent implements OpenDTU, Ma
 		if (!this.isEnabled()) {
 			return;
 		}
+		startInverterPolling();
+		requestActPowerLimit();
+	}
+	
+	private void startInverterPolling() {
 		this.httpBridge.subscribeJsonCycle(config.cycleInterval(), api.getInverterLiveDataUrl(config.inverterSerial()), (json,ex) -> {
 			if(ex==null) {
 				update(this.converter.toInverterModel(json));
@@ -83,6 +90,9 @@ public class OpenDTUImpl extends AbstractOpenemsComponent implements OpenDTU, Ma
 				update((OpenDTUModel)null);
 			}
 		});
+	}
+
+	private void requestActPowerLimit() {
 		this.httpBridge.requestJson(api.getLimitEndpoint()).whenComplete((json,ex)->{
 			if(ex==null) {
 				update(this.converter.toInverterLimitModel(json));
@@ -106,6 +116,7 @@ public class OpenDTUImpl extends AbstractOpenemsComponent implements OpenDTU, Ma
 		this._setActivePower(0);
 		this._setActiveProductionEnergy(0);
 		this._setActivePowerLimit(0);
+		this._setMaxApparentPower(0);
 	}
 	
 	private void update(OpenDTUModel inverterModel) {
@@ -128,7 +139,13 @@ public class OpenDTUImpl extends AbstractOpenemsComponent implements OpenDTU, Ma
 	}
 
 	private void update3Phase(OpenDTUInverter inverter) {
-		logger.warn("update 3Phase inverter not implemented yet!");
+		logger.warn("3-phase inverter functionality untested!");
+		var ac0 = inverter.getAc().get(0);
+		var ac1 = inverter.getAc().get(1);
+		var ac2 = inverter.getAc().get(2);
+		setPhase(SinglePhase.L1, ac0, ac0.getPower().getValueAsLong());
+		setPhase(SinglePhase.L2, ac1, ac0.getPower().getValueAsLong());
+		setPhase(SinglePhase.L3, ac2, ac0.getPower().getValueAsLong());
 	}
 	
 	private void setPhase(SinglePhase phase, AC ac, Long energy) {
@@ -190,9 +207,29 @@ public class OpenDTUImpl extends AbstractOpenemsComponent implements OpenDTU, Ma
 	}
 
 	private void update(OpenDTUInverterLimitModel inverterLimitModel) {
-		// actual inverter limit
-		logger.warn("implement me! {}",inverterLimitModel);
+		var inverterLimit = inverterLimitModel.getInverterLimit(this.config.inverterSerial());
+		this._setActivePowerLimit(inverterLimit.getLimitRelative());
+		this._setMaxApparentPower(inverterLimit.getMaxPower());
 	}
+	
+	private void setInverterLimit(InverterSetLimit limit) {
+		this.httpBridge.requestJson(api.getLimitSetEndpoint(this.converter.toInverterLimitJson(limit))).whenComplete((json,ex)->{
+			if(ex==null) {
+				handleSetLimitResponse(this.converter.toInverterSetLimitResponse(json));
+			} else {
+				logger.error("setInverterLimit:", ex);
+			}
+		});
+	}
+
+	private void handleSetLimitResponse(InverterResponse response) {
+		if(response.isOK()) {
+			requestActPowerLimit();
+		} else {
+			// what to do? 
+			logger.warn("set limit request error: {} {}",response.getCode(),response.getMessage());
+		}
+	} 
 
 	@Deactivate
 	protected void deactivate() {
@@ -209,7 +246,7 @@ public class OpenDTUImpl extends AbstractOpenemsComponent implements OpenDTU, Ma
 			return;
 		}
 		switch (event.getTopic()) {
-		case EdgeEventConstants.TOPIC_CYCLE_BEFORE_PROCESS_IMAGE:
+			case EdgeEventConstants.TOPIC_CYCLE_BEFORE_PROCESS_IMAGE:
 			// TODO: fill channels
 			break;
 		}

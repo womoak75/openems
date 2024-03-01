@@ -10,6 +10,8 @@ import io.openems.edge.pvinverter.opendtu.OpenDTUModel.AC;
 import io.openems.edge.pvinverter.opendtu.OpenDTUModel.DC;
 import io.openems.edge.pvinverter.opendtu.OpenDTUModel.Hints;
 import io.openems.edge.pvinverter.opendtu.OpenDTUModel.INV;
+import io.openems.edge.pvinverter.opendtu.OpenDTUModel.InverterResponse;
+import io.openems.edge.pvinverter.opendtu.OpenDTUModel.InverterResponse.ResponseType;
 import io.openems.edge.pvinverter.opendtu.OpenDTUModel.InverterValue.InverterUnit;
 import io.openems.edge.pvinverter.opendtu.OpenDTUModel.InverterValueDouble;
 import io.openems.edge.pvinverter.opendtu.OpenDTUModel.InverterValueLong;
@@ -150,6 +152,15 @@ public class OpenDTUConverter {
 				"Ok".equals(entryObject.get("limit_set_status").getAsString())?true:false));
 		});
 		return limitModel;
+	}
+	
+	public InverterResponse toInverterSetLimitResponse(JsonElement json) {
+		var response = new InverterResponse();
+		if(!"success".equals(json.getAsJsonObject().get("type").getAsString()))
+			response.setType(ResponseType.ERROR);
+		response.setMessage(json.getAsJsonObject().get("message").getAsString());
+		response.setCode(json.getAsJsonObject().get("code").getAsInt());
+		return response;
 	}
 	
 	public JsonObject toInverterLimitJson(InverterSetLimit model) {

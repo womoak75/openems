@@ -8,10 +8,10 @@ import org.junit.Test;
 
 import io.openems.common.exceptions.OpenemsError.OpenemsNamedException;
 import io.openems.common.utils.JsonUtils;
-import io.openems.edge.pvinverter.opendtu.OpenDTUModel.InverterValueDouble;
-import io.openems.edge.pvinverter.opendtu.OpenDTUModel.InverterValue.InverterUnit;
 import io.openems.edge.pvinverter.opendtu.OpenDTUInverterLimitModel.InverterSetLimit;
-import io.openems.edge.pvinverter.opendtu.OpenDTUInverterLimitModel.InverterSetLimit.LimitType;; 
+import io.openems.edge.pvinverter.opendtu.OpenDTUInverterLimitModel.InverterSetLimit.LimitType;
+import io.openems.edge.pvinverter.opendtu.OpenDTUModel.InverterValue.InverterUnit;
+import io.openems.edge.pvinverter.opendtu.OpenDTUModel.InverterValueDouble;; 
 public class OpenDTUConverterTest {
 
 	@Test
@@ -392,5 +392,29 @@ public class OpenDTUConverterTest {
 		assertEquals(50,json.get("limit_value").getAsInt());
 		assertEquals(LimitType.RelativPersistent.toLimit(),json.get("limit_type").getAsInt());
 	
+	}
+	
+	@Test
+	public void testInverteSetLimitErrorResponse() throws OpenemsNamedException {
+		var json = "{\"type\":\"error\",\"message\":\"something went wrong!\",\"code\":1000}";
+		var jsonObj = JsonUtils.parse(json);
+		var converter = new OpenDTUConverter();
+		var model = converter.toInverterSetLimitResponse(jsonObj);
+		
+		assertFalse(model.isOK());
+		assertEquals("something went wrong!",model.getMessage());
+		assertEquals(1000,model.getCode());
+	}
+	
+	@Test
+	public void testInverteSetLimitOKResponse() throws OpenemsNamedException {
+		var json = "{\"type\":\"success\",\"message\":\"Settings saved!\",\"code\":1001}";
+		var jsonObj = JsonUtils.parse(json);
+		var converter = new OpenDTUConverter();
+		var model = converter.toInverterSetLimitResponse(jsonObj);
+		
+		assertTrue(model.isOK());
+		assertEquals("Settings saved!",model.getMessage());
+		assertEquals(1001,model.getCode());
 	}
 }
