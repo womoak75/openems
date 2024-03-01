@@ -15,6 +15,7 @@ import org.osgi.service.metatype.annotations.Designate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.openems.common.exceptions.OpenemsError.OpenemsNamedException;
 import io.openems.edge.bridge.http.api.BridgeHttp;
 import io.openems.edge.bridge.http.api.BridgeHttpFactory;
 import io.openems.edge.common.component.AbstractOpenemsComponent;
@@ -143,9 +144,15 @@ public class OpenDTUImpl extends AbstractOpenemsComponent implements OpenDTU, Ma
 		var ac0 = inverter.getAc().get(0);
 		var ac1 = inverter.getAc().get(1);
 		var ac2 = inverter.getAc().get(2);
-		setPhase(SinglePhase.L1, ac0, ac0.getPower().getValueAsLong());
-		setPhase(SinglePhase.L2, ac1, ac0.getPower().getValueAsLong());
-		setPhase(SinglePhase.L3, ac2, ac0.getPower().getValueAsLong());
+		// TODO: where/how to get energy / phase
+		setPhase(SinglePhase.L1, ac0, 0l);
+		setPhase(SinglePhase.L2, ac1, 0l);
+		setPhase(SinglePhase.L3, ac2, 0l);
+		this._setActivePower(
+				ac0.getPower().getValueAsInt()+
+				ac1.getPower().getValueAsInt()+
+				ac2.getPower().getValueAsInt());
+		this._setActiveProductionEnergy(inverter.getInv().getYieldDay().getValueAsInt());
 	}
 	
 	private void setPhase(SinglePhase phase, AC ac, Long energy) {
@@ -212,7 +219,9 @@ public class OpenDTUImpl extends AbstractOpenemsComponent implements OpenDTU, Ma
 		this._setMaxApparentPower(inverterLimit.getMaxPower());
 	}
 	
-	private void setInverterLimit(InverterSetLimit limit) {
+	private void setInverterLimit(int value) {
+		var limit = new InverterSetLimit(this.config.inverterSerial());
+		limit.setLimit_value(value);
 		this.httpBridge.requestJson(api.getLimitSetEndpoint(this.converter.toInverterLimitJson(limit))).whenComplete((json,ex)->{
 			if(ex==null) {
 				handleSetLimitResponse(this.converter.toInverterSetLimitResponse(json));
@@ -250,6 +259,16 @@ public class OpenDTUImpl extends AbstractOpenemsComponent implements OpenDTU, Ma
 			// TODO: fill channels
 			break;
 		}
+	}
+
+	@Override
+	public void setActivePowerLimit(int value) throws OpenemsNamedException {
+		setInverterLimit(value);
+	}
+
+	@Override
+	public void setActivePowerLimit(Integer value) throws OpenemsNamedException {
+		setInverterLimit(value);
 	}
 
 	@Override
