@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import io.openems.edge.pvinverter.opendtu.OpenDTUModel.InverterValue.InverterUnit;
+
 public class OpenDTUModel {
 	public static class OpenDTUInverter {
 		private String name;
@@ -102,6 +104,12 @@ public class OpenDTUModel {
 		private InverterValueDouble reactivPower;
 		public AC(int nr) {
 			this.nr = nr;
+			this.power = new InverterValueDouble(0d,InverterUnit.W,1);
+			this.voltage = new InverterValueDouble(0d,InverterUnit.V,1);
+			this.current = new InverterValueDouble(0d,InverterUnit.A,1);
+			this.frequency = new InverterValueDouble(0d,InverterUnit.Hz,1);
+			this.powerFactor = new InverterValueDouble(0d,InverterUnit.NONE,1);
+			this.reactivPower = new InverterValueDouble(0d,InverterUnit.VAR,1);
 		}
 		public int getNr() {
 			return this.nr;
@@ -296,6 +304,9 @@ public class OpenDTUModel {
 		public Long getValueAsLong() {
 			return getValue().longValue();
 		}
+		public Integer getValueAsInt() {
+			return getValue().intValue();
+		}
 		
 	}
 	public static class InverterValueLong extends InverterValue<Long> {
@@ -412,11 +423,14 @@ public class OpenDTUModel {
 	public List<OpenDTUInverter> getInverters() {
 		return new ArrayList<>(this.inverters.values());
 	}
-	
+	public OpenDTUInverter getInverter(String inverterSerial) {
+		return this.inverters.get(inverterSerial);
+	}
 	public Hints getHints() {
 		return hints;
 	}
 	public void setHints(Hints hints) {
 		this.hints = hints;
 	}
+
 }

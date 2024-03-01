@@ -312,11 +312,12 @@ public interface BridgeHttpCycle {
 	 *                 if existing and the second argument is passed if an error
 	 *                 happend. One of the params is always null and one not
 	 */
-	public default void subscribeJsonEveryCycle(//
+	public default void subscribeJsonCycle(//
+			final int cycle, //
 			final Endpoint endpoint, //
 			final BiConsumer<JsonElement, Throwable> action //
 	) {
-		this.subscribeCycle(new CycleEndpoint(1, endpoint, t -> {
+		this.subscribeCycle(new CycleEndpoint(cycle, endpoint, t -> {
 			try {
 				action.accept(JsonUtils.parse(t),null);
 			} catch (Exception e) {

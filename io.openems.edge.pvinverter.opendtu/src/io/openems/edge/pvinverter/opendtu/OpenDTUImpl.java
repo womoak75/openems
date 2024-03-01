@@ -20,18 +20,23 @@ import io.openems.edge.bridge.http.api.BridgeHttpFactory;
 import io.openems.edge.common.component.AbstractOpenemsComponent;
 import io.openems.edge.common.component.OpenemsComponent;
 import io.openems.edge.common.event.EdgeEventConstants;
+import io.openems.edge.meter.api.ElectricityMeter;
 import io.openems.edge.meter.api.MeterType;
+import io.openems.edge.meter.api.SinglePhase;
+import io.openems.edge.pvinverter.api.ManagedSymmetricPvInverter;
+import io.openems.edge.pvinverter.opendtu.OpenDTUModel.AC;
+import io.openems.edge.pvinverter.opendtu.OpenDTUModel.OpenDTUInverter;
 
 @Designate(ocd = Config.class, factory = true)
 @Component(//
-		name = "io.openems.edge.pvinerter.opendtu", //
+		name = "io.openems.edge.pvinverter.opendtu", //
 		immediate = true, //
 		configurationPolicy = ConfigurationPolicy.REQUIRE	 //
 )
 @EventTopics({ //
 		EdgeEventConstants.TOPIC_CYCLE_BEFORE_PROCESS_IMAGE, //
 })
-public class OpenDTUImpl extends AbstractOpenemsComponent implements OpenDTU, OpenemsComponent, EventHandler {
+public class OpenDTUImpl extends AbstractOpenemsComponent implements OpenDTU, ManagedSymmetricPvInverter, ElectricityMeter, OpenemsComponent, EventHandler {
 
 	private final Logger logger = LoggerFactory.getLogger(OpenDTUImpl.class);
 	
@@ -44,26 +49,34 @@ public class OpenDTUImpl extends AbstractOpenemsComponent implements OpenDTU, Op
 
 	private OpenDtuEndpoints api;
 	private OpenDTUConverter converter;
+	private Config config;
+
+	private final AC nullAC;
 
 	public OpenDTUImpl() {
 		super(//
 				OpenemsComponent.ChannelId.values(), //
-				OpenDTU.ChannelId.values() //
+				OpenDTU.ChannelId.values(), //
+				ManagedSymmetricPvInverter.ChannelId.values(), //
+				ElectricityMeter.ChannelId.values() //
 		);
+		this.nullAC = new AC(3);
 	}
 	
 	@Activate
 	private void activate(ComponentContext context, Config config) {
 		super.activate(context, config.id(), config.alias(), config.enabled());
+		this.config = config;
 		this.api = new OpenDtuEndpoints(config);
 		this.converter = new OpenDTUConverter();
 		this.httpBridge = this.httpBridgeFactory.get();
-
+		init();
+		
 		if (!this.isEnabled()) {
 			return;
 		}
-		this.httpBridge.subscribeJsonEveryCycle(api.getInverterLiveDataUrl(config.inverterSerial()), (json,ex) -> {
-			if(ex!=null) {
+		this.httpBridge.subscribeJsonCycle(config.cycleInterval(), api.getInverterLiveDataUrl(config.inverterSerial()), (json,ex) -> {
+			if(ex==null) {
 				update(this.converter.toInverterModel(json));
 			} else {
 				logger.error("getInverterLiveData:", ex);
@@ -71,7 +84,7 @@ public class OpenDTUImpl extends AbstractOpenemsComponent implements OpenDTU, Op
 			}
 		});
 		this.httpBridge.requestJson(api.getLimitEndpoint()).whenComplete((json,ex)->{
-			if(ex!=null) {
+			if(ex==null) {
 				update(this.converter.toInverterLimitModel(json));
 			} else {
 				logger.error("getInverterLimit:", ex);
@@ -79,18 +92,106 @@ public class OpenDTUImpl extends AbstractOpenemsComponent implements OpenDTU, Op
 			}
 		});
 	}
+	
+	private void init() {
+		this._setActivePowerL1(0);
+		this._setReactivePowerL1(0);
+		this._setCurrentL1(0);
+		this._setVoltageL1(0);
+		this._setActiveProductionEnergyL1(0);
+		this._setActivePowerL2(0);
+		this._setActiveProductionEnergyL2(0);
+		this._setActivePowerL3(0);
+		this._setActiveProductionEnergyL3(0);
+		this._setActivePower(0);
+		this._setActiveProductionEnergy(0);
+		this._setActivePowerLimit(0);
+	}
+	
+	private void update(OpenDTUModel inverterModel) {
+		var inverter = inverterModel.getInverter(this.config.inverterSerial());
+		if(inverter==null) {
+			logger.warn("no data for inverter "+this.config.inverterSerial());
+			return;
+		}
+		var acs = inverter.getAc();
+		// not sure about this
+		// 1-phase hoymiles -> 1 element in ac list
+		// and 3-phase models -> 3 elements in ac list ???
+		if(acs.size()==1) {
+			update1Phase(inverter);
+		} else if(acs.size()==3) {
+			update3Phase(inverter);
+		} else {
+			logger.warn("inverter data contains odd number of ac elements");
+		}
+	}
+
+	private void update3Phase(OpenDTUInverter inverter) {
+		logger.warn("update 3Phase inverter not implemented yet!");
+	}
+	
+	private void setPhase(SinglePhase phase, AC ac, Long energy) {
+		var power = ac.getPower().getValueAsInt();
+		var reactivePower = ac.getReactivPower().getValueAsInt();
+		var voltage = ac.getVoltage().getValueAsInt();
+		var current = ac.getCurrent().getValueAsInt();
+		switch(phase) {
+			case L1:
+				this._setActivePowerL1(power);
+				this._setReactivePowerL1(reactivePower);
+				this._setActiveProductionEnergyL1(energy);
+				this._setCurrentL1(current);
+				this._setVoltageL1(voltage);
+				break;
+			case L2:
+				this._setActivePowerL2(power);
+				this._setReactivePowerL2(reactivePower);
+				this._setActiveProductionEnergyL2(energy);
+				this._setCurrentL2(current);
+				this._setVoltageL2(voltage);
+				break;
+			case L3:
+				this._setActivePowerL3(power);
+				this._setReactivePowerL3(reactivePower);
+				this._setActiveProductionEnergyL3(energy);
+				this._setCurrentL3(current);
+				this._setVoltageL3(voltage);
+				break;
+			default:
+		}
+	}
+
+	private void update1Phase(OpenDTUInverter inverter) {
+		var ac = inverter.getAc().get(0);
+		var power = ac.getPower().getValueAsInt();
+		var energy = inverter.getInv().getYieldDay().getValueAsLong();
+		logger.info("inverter[{}] power={}, energy={}",inverter.getName(),power,energy);
+		switch(this.config.phase()) {
+			case L1:
+				setPhase(SinglePhase.L1, ac, energy);
+				setPhase(SinglePhase.L2, nullAC, 0l);
+				setPhase(SinglePhase.L3, nullAC, 0l);
+				break;
+			case L2:
+				setPhase(SinglePhase.L1, nullAC, 0l);
+				setPhase(SinglePhase.L2, ac, energy);
+				setPhase(SinglePhase.L3, nullAC, 0l);
+				break;
+			case L3:
+				setPhase(SinglePhase.L1, nullAC, 0l);
+				setPhase(SinglePhase.L2, nullAC, 0l);
+				setPhase(SinglePhase.L3, ac, energy);
+				break;
+			default:
+		}
+		this._setActivePower(power);
+		this._setActiveProductionEnergy(energy);
+	}
 
 	private void update(OpenDTUInverterLimitModel inverterLimitModel) {
 		// actual inverter limit
 		logger.warn("implement me! {}",inverterLimitModel);
-	}
-
-	private void update(OpenDTUModel openDtuModel) {
-		// inverter live data update
-		if(openDtuModel!=null)
-			this._setActiveProductionEnergy(openDtuModel.getTotal().getPower().getValueAsLong());
-		else
-			this._setActiveProductionEnergy(null);
 	}
 
 	@Deactivate

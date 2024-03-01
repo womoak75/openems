@@ -1,6 +1,7 @@
 package io.openems.edge.pvinverter.opendtu;
 
 import io.openems.common.test.AbstractComponentConfig;
+import io.openems.edge.meter.api.SinglePhase;
 import io.openems.edge.pvinverter.opendtu.Config;
 
 @SuppressWarnings("all")
@@ -14,6 +15,8 @@ public class OpenDTUConfig extends AbstractComponentConfig implements Config {
 		private String openDtuSchema;
 		private String openDtuUser;
 		private String openDtuPass;
+		private int cycleInterval;
+		private SinglePhase phase;
 
 		private Builder() {
 		}
@@ -52,10 +55,22 @@ public class OpenDTUConfig extends AbstractComponentConfig implements Config {
 			this.openDtuPass = openDtuPass;
 			return this;
 		}
+		
+		public Builder setCycleInterval(int cycleInterval) {
+			this.cycleInterval = cycleInterval;
+			return this;
+		}
+		
+		public Builder setPhase(SinglePhase phase) {
+			this.phase = phase;
+			return this;
+		}
+		
 
 		public OpenDTUConfig build() {
 			return new OpenDTUConfig(this);
 		}
+
 	}
 
 	/**
@@ -102,6 +117,16 @@ public class OpenDTUConfig extends AbstractComponentConfig implements Config {
 	@Override
 	public String openDtuPass() {
 		return this.builder.openDtuPass;
+	}
+	
+	@Override
+	public int cycleInterval() {
+		return this.builder.cycleInterval;
+	}
+	
+	@Override
+	public SinglePhase phase() {
+		return this.builder.phase;
 	}
 
 }
