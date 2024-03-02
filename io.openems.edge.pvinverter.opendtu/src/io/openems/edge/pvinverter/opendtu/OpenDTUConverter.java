@@ -23,8 +23,7 @@ public class OpenDTUConverter {
 	public OpenDTUModel toInverterModel(JsonElement json) {
 		if(json==null 
 			|| !json.isJsonObject() 
-			|| !json.getAsJsonObject().has("inverters") 
-			|| json.getAsJsonObject().get("inverters").getAsJsonArray().size() != 1)
+			|| !json.getAsJsonObject().has("inverters"))
 			return null;
 		var openDTUModel = new OpenDTUModel();
 		var inverterObject = json.getAsJsonObject().get("inverters").getAsJsonArray();
