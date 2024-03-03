@@ -19,6 +19,14 @@ public class OpenDTUConfig extends AbstractComponentConfig implements Config {
 		private SinglePhase phase;
 
 		private Builder() {
+			this.inverterSerial = "";
+			this.openDtuHost = "localhost";
+			this.openDtuPort = 80;
+			this.openDtuSchema = "http";
+			this.openDtuUser = "admin";
+			this.openDtuPass = "admin";
+			this.cycleInterval = 1;
+			this.phase = SinglePhase.L1;
 		}
 
 		public Builder setId(String id) {

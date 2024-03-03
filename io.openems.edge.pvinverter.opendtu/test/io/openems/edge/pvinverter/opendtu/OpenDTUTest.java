@@ -2,20 +2,29 @@ package io.openems.edge.pvinverter.opendtu;
 
 import org.junit.Test;
 
+import io.openems.edge.bridge.http.api.BridgeHttp;
+import io.openems.edge.bridge.http.dummy.DummyBridgeHttpFactory;
 import io.openems.edge.common.test.AbstractComponentTest.TestCase;
 import io.openems.edge.common.test.ComponentTest;
+import io.openems.edge.common.test.DummyConfigurationAdmin;
 
 public class OpenDTUTest {
 
-	private static final String COMPONENT_ID = "opendtu0";
+	private final OpenDTUTestUtils testUtils = new OpenDTUTestUtils();
+	private final OpenDTUConfig config = testUtils.createConfig();
 
 	@Test
 	public void test() throws Exception {
-		new ComponentTest(new OpenDTUImpl()) //
-				.activate(OpenDTUConfig.create() //
-						.setId(COMPONENT_ID) //
-						.build())
-				.next(new TestCase());
+		String dataJson = testUtils.readFromResource("resources/inverterdata.json");
+		var limitJson = testUtils.readFromResource("resources/limitdata.json");
+		final DummyBridgeHttpFactory bridgeHttpFactory = testUtils.createHttpBridgeFactory();
+		final BridgeHttp bridgeHttp = testUtils.createHttpBridge(dataJson, limitJson);
+		bridgeHttpFactory.setBridgeHttp(bridgeHttp);
+		var openDtu = new OpenDTUImpl();
+		new ComponentTest(openDtu) //
+				.addReference("cm", new DummyConfigurationAdmin()) //
+				.addReference("httpBridgeFactory", bridgeHttpFactory) //
+				.activate(config).next(new TestCase());
 	}
 
 }

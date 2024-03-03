@@ -8,9 +8,10 @@ import com.google.gson.JsonObject;
 
 import io.openems.edge.bridge.http.api.BridgeHttp.Endpoint;
 import io.openems.edge.bridge.http.api.HttpMethod;
+import io.openems.edge.pvinverter.opendtu.model.OpenDTUEndpoint;
 
 public class OpenDtuEndpoints {
-	
+
 	private String host;
 	private int port;
 	private String schema;
@@ -26,40 +27,49 @@ public class OpenDtuEndpoints {
 		this.user = config.openDtuUser();
 		this.pass = config.openDtuPass();
 	}
+
 	public OpenDtuEndpoints(String host, int port) {
 		this.host = host;
 		this.port = port;
 		this.schema = "http";
 	}
-	
+
 	private String basicAuthValue() {
-	    return "Basic " + Base64.getEncoder().encodeToString((user + ":" + pass).getBytes());
+		return "Basic " + Base64.getEncoder().encodeToString((user + ":" + pass).getBytes());
 	}
-	
+
 	private String getBaseUrl() {
-		return schema+"://"+host+":"+port;
+		return schema + "://" + host + ":" + port;
 	}
-	
-	public Endpoint getInverterListEndpoint() {
-		return new Endpoint(getBaseUrl()+"/api/inverter/list", HttpMethod.GET, this.connectTimeout, this.readTimeoute, null, authPropertiesMap());
+
+	public OpenDTUEndpoint getInverterListEndpoint() {
+		return new OpenDTUEndpoint(new Endpoint(getBaseUrl() + "/api/inverter/list", HttpMethod.GET,
+				this.connectTimeout, this.readTimeoute, null, authPropertiesMap()));
 	}
-	
+
 	public String getInverterLiveDataUrl(String inverterId) {
-		return getBaseUrl()+"/api/livedata/status?inv="+inverterId;
+		return getBaseUrl() + "/api/livedata/status?inv=" + inverterId;
 	}
-	
-	public Endpoint getInverterLiveDataEndpoint(String inverterId) {
-		return new Endpoint(getInverterLiveDataUrl(inverterId), HttpMethod.GET, this.connectTimeout, this.readTimeoute, null, propertiesMap());
+
+	public OpenDTUEndpoint getInverterLiveDataEndpoint(String inverterId) {
+		return new OpenDTUEndpoint(new Endpoint(getInverterLiveDataUrl(inverterId), HttpMethod.GET, this.connectTimeout,
+				this.readTimeoute, null, propertiesMap()));
 	}
-	
-	public Endpoint getLimitEndpoint() {
-		return new Endpoint(getBaseUrl()+"/api/limit/status", HttpMethod.GET, this.connectTimeout, this.readTimeoute, null, authPropertiesMap());
+
+	public OpenDTUEndpoint getLimitEndpoint() {
+		return new OpenDTUEndpoint(new Endpoint(getBaseUrl() + "/api/limit/status", HttpMethod.GET, this.connectTimeout,
+				this.readTimeoute, null, authPropertiesMap()));
 	}
-	
-	public Endpoint getLimitSetEndpoint(final JsonObject jsonObject) {
-		return new Endpoint(getBaseUrl()+"/api/limit/config", HttpMethod.POST, this.connectTimeout, this.readTimeoute, jsonObject.toString(), authPropertiesMap());
+
+	public OpenDTUEndpoint getLimitSetEndpoint() {
+		return getInverterLiveDataEndpoint(null);
 	}
-	
+
+	public OpenDTUEndpoint getLimitSetEndpoint(final JsonObject jsonObject) {
+		return new OpenDTUEndpoint(new Endpoint(getBaseUrl() + "/api/limit/config", HttpMethod.POST,
+				this.connectTimeout, this.readTimeoute, jsonObject.toString(), authPropertiesMap()));
+	}
+
 	private Map<String, String> authPropertiesMap() {
 		var map = propertiesMap();
 		map.put("Authorization", basicAuthValue());

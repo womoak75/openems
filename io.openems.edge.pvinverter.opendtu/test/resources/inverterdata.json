@@ -1,0 +1,247 @@
+{
+  "inverters": [
+    {
+      "serial": "116666666666",
+      "name": "hm1500",
+      "order": 0,
+      "data_age": 11670,
+      "poll_enabled": false,
+      "reachable": false,
+      "producing": false,
+      "limit_relative": 100,
+      "limit_absolute": 1500,
+      "AC": {
+        "0": {
+          "Power": {
+            "v": 23,
+            "u": "W",
+            "d": 1
+          },
+          "Voltage": {
+            "v": 223.8999939,
+            "u": "V",
+            "d": 1
+          },
+          "Current": {
+            "v": 0,
+            "u": "A",
+            "d": 2
+          },
+          "Frequency": {
+            "v": 49.97999954,
+            "u": "Hz",
+            "d": 2
+          },
+          "PowerFactor": {
+            "v": 0,
+            "u": "",
+            "d": 3
+          },
+          "ReactivePower": {
+            "v": 19.5,
+            "u": "var",
+            "d": 1
+          }
+        }
+      },
+      "DC": {
+        "0": {
+          "name": {
+            "u": "panel4"
+          },
+          "Power": {
+            "v": 0.100000001,
+            "u": "W",
+            "d": 1
+          },
+          "Voltage": {
+            "v": 12.10000038,
+            "u": "V",
+            "d": 1
+          },
+          "Current": {
+            "v": 0.01,
+            "u": "A",
+            "d": 2
+          },
+          "YieldDay": {
+            "v": 190,
+            "u": "Wh",
+            "d": 0
+          },
+          "YieldTotal": {
+            "v": 233.9459991,
+            "u": "kWh",
+            "d": 3
+          },
+          "Irradiation": {
+            "v": 0.044052865,
+            "u": "%",
+            "d": 3,
+            "max": 227
+          }
+        },
+        "1": {
+          "name": {
+            "u": "panel3"
+          },
+          "Power": {
+            "v": 0.200000003,
+            "u": "W",
+            "d": 1
+          },
+          "Voltage": {
+            "v": 12.10000038,
+            "u": "V",
+            "d": 1
+          },
+          "Current": {
+            "v": 0.02,
+            "u": "A",
+            "d": 2
+          },
+          "YieldDay": {
+            "v": 174,
+            "u": "Wh",
+            "d": 0
+          },
+          "YieldTotal": {
+            "v": 69.77899933,
+            "u": "kWh",
+            "d": 3
+          },
+          "Irradiation": {
+            "v": 0.083333336,
+            "u": "%",
+            "d": 3,
+            "max": 240
+          }
+        },
+        "2": {
+          "name": {
+            "u": "panel2"
+          },
+          "Power": {
+            "v": 0.200000003,
+            "u": "W",
+            "d": 1
+          },
+          "Voltage": {
+            "v": 12.10000038,
+            "u": "V",
+            "d": 1
+          },
+          "Current": {
+            "v": 0.01,
+            "u": "A",
+            "d": 2
+          },
+          "YieldDay": {
+            "v": 162,
+            "u": "Wh",
+            "d": 0
+          },
+          "YieldTotal": {
+            "v": 160.2870026,
+            "u": "kWh",
+            "d": 3
+          },
+          "Irradiation": {
+            "v": 0.041666668,
+            "u": "%",
+            "d": 3,
+            "max": 480
+          }
+        },
+        "3": {
+          "name": {
+            "u": "panel1"
+          },
+          "Power": {
+            "v": 0.300000012,
+            "u": "W",
+            "d": 1
+          },
+          "Voltage": {
+            "v": 12.10000038,
+            "u": "V",
+            "d": 1
+          },
+          "Current": {
+            "v": 0.029999999,
+            "u": "A",
+            "d": 2
+          },
+          "YieldDay": {
+            "v": 185,
+            "u": "Wh",
+            "d": 0
+          },
+          "YieldTotal": {
+            "v": 102.012001,
+            "u": "kWh",
+            "d": 3
+          },
+          "Irradiation": {
+            "v": 0.062500007,
+            "u": "%",
+            "d": 3,
+            "max": 480
+          }
+        }
+      },
+      "INV": {
+        "0": {
+          "Power DC": {
+            "v": 0.800000012,
+            "u": "W",
+            "d": 1
+          },
+          "YieldDay": {
+            "v": 711,
+            "u": "Wh",
+            "d": 0
+          },
+          "YieldTotal": {
+            "v": 566.0240479,
+            "u": "kWh",
+            "d": 3
+          },
+          "Temperature": {
+            "v": 6.900000095,
+            "u": "°C",
+            "d": 1
+          },
+          "Efficiency": {
+            "v": 0,
+            "u": "%",
+            "d": 3
+          }
+        }
+      },
+      "events": 4
+    }
+  ],
+  "total": {
+    "Power": {
+      "v": 0,
+      "u": "W",
+      "d": 0
+    },
+    "YieldDay": {
+      "v": 909,
+      "u": "Wh",
+      "d": 0
+    },
+    "YieldTotal": {
+      "v": 714.3240356,
+      "u": "kWh",
+      "d": 3
+    }
+  },
+  "hints": {
+    "time_sync": false,
+    "radio_problem": false,
+    "default_password": false
+  }
+}
