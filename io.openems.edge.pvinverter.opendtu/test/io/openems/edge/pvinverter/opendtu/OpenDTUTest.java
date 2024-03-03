@@ -15,10 +15,9 @@ public class OpenDTUTest {
 
 	@Test
 	public void test() throws Exception {
-		String dataJson = testUtils.readFromResource("resources/inverterdata.json");
 		var limitJson = testUtils.readFromResource("resources/limitdata.json");
 		final DummyBridgeHttpFactory bridgeHttpFactory = testUtils.createHttpBridgeFactory();
-		final BridgeHttp bridgeHttp = testUtils.createHttpBridge(dataJson, limitJson);
+		final BridgeHttp bridgeHttp = testUtils.createHttpBridge(limitJson);
 		bridgeHttpFactory.setBridgeHttp(bridgeHttp);
 		var openDtu = new OpenDTUImpl();
 		new ComponentTest(openDtu) //

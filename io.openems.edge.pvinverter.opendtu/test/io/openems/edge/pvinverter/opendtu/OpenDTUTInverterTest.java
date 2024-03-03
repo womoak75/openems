@@ -17,13 +17,14 @@ public class OpenDTUTInverterTest {
 	private final OpenDTUTestUtils testUtils = new OpenDTUTestUtils();
 	private final OpenDTUConverter converter = new OpenDTUConverter();
 	private final Config config = testUtils.createConfig();
+	private final OpenDtuEndpoints endpoints = new OpenDtuEndpoints(config);
 
 	@Test
 	public void testInverterDataAndLimit() throws Exception {
 		var dataJson = testUtils.readFromResource("resources/inverterdata.json");
 		var limitJson = testUtils.readFromResource("resources/limitdata.json");
 
-		var bridgeHttp = testUtils.createHttpBridge(dataJson, limitJson);
+		var bridgeHttp = testUtils.createHttpBridge(limitJson);
 
 		var inverter = new OpenDTUInverter(config, converter);
 		inverter.setBridgeHttp(bridgeHttp);
@@ -51,6 +52,23 @@ public class OpenDTUTInverterTest {
 		assertEquals(19.5, inverter.getPhase(SinglePhase.L1).reactivPower().toDoubleValue().doubleValue(), 0.001);
 		assertNull(inverter.getPhase(SinglePhase.L2));
 		assertNull(inverter.getPhase(SinglePhase.L3));
+	}
+
+	@Test
+	public void testsetInverterLimit() throws Exception {
+		var dataJson = testUtils.readFromResource("resources/inverterdata.json");
+		var limitJson = testUtils.readFromResource("resources/limitdata.json");
+		var bridgeHttp = testUtils.createHttpBridge(limitJson);
+
+		var inverter = new OpenDTUInverter(config, converter);
+		inverter.setBridgeHttp(bridgeHttp);
+		inverter.init();
+		inverter.start();
+		bridgeHttp.callSubscriptionEndpoint(testUtils.getInverterDataEndpoint(), dataJson);
+		assertTrue(inverter.isInitialized());
+		bridgeHttp.setResponse(this.endpoints.getLimitEndpoint().toEndpoint(), testUtils.createLimitRespone(23));
+		inverter.setLimit(23);
+		assertEquals(23, inverter.getActiveLimit().intValue());
 	}
 
 }

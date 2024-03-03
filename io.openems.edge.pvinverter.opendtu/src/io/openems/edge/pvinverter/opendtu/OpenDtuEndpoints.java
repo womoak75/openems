@@ -19,8 +19,10 @@ public class OpenDtuEndpoints {
 	private int readTimeoute;
 	private String user;
 	private String pass;
+	private Config config;
 
 	public OpenDtuEndpoints(Config config) {
+		this.config = config;
 		this.host = config.openDtuHost();
 		this.port = config.openDtuPort();
 		this.schema = config.openDtuSchema();
@@ -49,6 +51,10 @@ public class OpenDtuEndpoints {
 
 	public String getInverterLiveDataUrl(String inverterId) {
 		return getBaseUrl() + "/api/livedata/status?inv=" + inverterId;
+	}
+
+	public OpenDTUEndpoint getInverterLiveDataEndpoint() {
+		return getInverterLiveDataEndpoint(this.config.inverterSerial());
 	}
 
 	public OpenDTUEndpoint getInverterLiveDataEndpoint(String inverterId) {

@@ -1,7 +1,6 @@
 package io.openems.edge.pvinverter.opendtu;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.lang.reflect.InvocationTargetException;
@@ -9,6 +8,9 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import com.google.gson.JsonObject;
+
+import io.openems.common.utils.JsonUtils;
 import io.openems.edge.bridge.http.api.BridgeHttp;
 import io.openems.edge.bridge.http.api.BridgeHttp.Endpoint;
 import io.openems.edge.bridge.http.dummy.DummyBridgeHttpFactory;
@@ -17,7 +19,9 @@ public class OpenDTUTestUtils {
 
 	public static abstract class OpenDTUBridgeHttp implements BridgeHttp {
 
-		protected abstract void callSubscriptionEndpoint(Endpoint endpoint, String json);
+		protected abstract void callSubscriptionEndpoint(Endpoint endpoint, JsonObject json);
+
+		protected abstract void setResponse(Endpoint endpoint, JsonObject jsonResponse);
 	}
 
 	public final String COMPONENT_ID = "opendtu0";
@@ -25,7 +29,7 @@ public class OpenDTUTestUtils {
 	public final OpenDTUConfig config = createConfig();
 	public final OpenDtuEndpoints endpoints = createEndpoints(config);
 
-	public String readFromResource(String fileName) throws IOException {
+	public JsonObject readFromResource(String fileName) throws Exception {
 		InputStream ioStream = OpenDTUTest.class.getClassLoader().getResourceAsStream(fileName);
 
 		if (ioStream == null) {
@@ -39,7 +43,12 @@ public class OpenDTUTestUtils {
 			}
 			ioStream.close();
 		}
-		return buffer.toString();
+		return JsonUtils.parseToJsonObject(buffer.toString());
+	}
+
+	public JsonObject createLimitResponse(boolean b) throws Exception {
+		return JsonUtils.parseToJsonObject(
+				"{\"type\":\"" + (b ? "success" : "error") + "\",\"message\":\"Settings saved!\",\"code\":1001}");
 	}
 
 	public OpenDTUConfig createConfig() {
@@ -62,20 +71,29 @@ public class OpenDTUTestUtils {
 				.equals(endpoint.url());
 	}
 
-	public OpenDTUBridgeHttp createHttpBridge(String inverterDataJson, String inverterLimitJson) {
+	public OpenDTUBridgeHttp createHttpBridge(final JsonObject limitJson) throws Exception {
 		return new OpenDTUBridgeHttp() {
 
+			public final Map<String, JsonObject> jsonResponses = new HashMap<>();
+			{
+				jsonResponses.put(toKey(endpoints.getLimitEndpoint().toEndpoint()), limitJson);
+				jsonResponses.put(toKey(endpoints.getLimitSetEndpoint().toEndpoint()), createLimitResponse(true));
+			}
 			public final Map<String, CycleEndpoint> cycleEndpoints = new HashMap<>();
+
+			private String toKey(Endpoint endpoint) {
+				return endpoint.url() + endpoint.method();
+			}
 
 			@Override
 			public void subscribeCycle(CycleEndpoint endpoint) {
-				this.cycleEndpoints.put(endpoint.endpoint().url() + endpoint.endpoint().method(), endpoint);
+				this.cycleEndpoints.put(toKey(endpoint.endpoint()), endpoint);
 			}
 
-			public void callSubscriptionEndpoint(Endpoint endpoint, String json) {
-				var cycleEndpoint = this.cycleEndpoints.get(endpoint.url() + endpoint.method());
+			public void callSubscriptionEndpoint(Endpoint endpoint, JsonObject json) {
+				var cycleEndpoint = this.cycleEndpoints.get(toKey(endpoint));
 				if (cycleEndpoint != null) {
-					cycleEndpoint.result().accept(inverterDataJson);
+					cycleEndpoint.result().accept(json.toString());
 				}
 			}
 
@@ -86,11 +104,17 @@ public class OpenDTUTestUtils {
 
 			@Override
 			public CompletableFuture<String> request(Endpoint endpoint) {
-				if (isInverterLimitEndpoint(endpoint)) {
-					return CompletableFuture.completedFuture(inverterLimitJson);
+				JsonObject response = this.jsonResponses.get(toKey(endpoint));
+				if (response != null) {
+					return CompletableFuture.completedFuture(response.toString());
 				} else {
 					return null;
 				}
+			}
+
+			@Override
+			protected void setResponse(Endpoint endpoint, JsonObject responseJson) {
+				this.jsonResponses.put(toKey(endpoint), responseJson);
 			}
 
 		};
@@ -104,4 +128,11 @@ public class OpenDTUTestUtils {
 	public Endpoint getInverterDataEndpoint() {
 		return this.endpoints.getInverterLiveDataEndpoint(this.config.inverterSerial()).toEndpoint();
 	}
+
+	public JsonObject createLimitRespone(int i) throws Exception {
+		String json = "{\n" + "  \"" + this.config.inverterSerial() + "\": {\n" + "    \"limit_relative\": " + i + ",\n"
+				+ "    \"max_power\": 1500,\n" + "    \"limit_set_status\": \"Ok\"\n" + "  }\n" + "}";
+		return JsonUtils.parse(json).getAsJsonObject();
+	}
+
 }
