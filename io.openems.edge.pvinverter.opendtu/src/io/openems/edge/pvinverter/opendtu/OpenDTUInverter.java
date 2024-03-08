@@ -1,42 +1,51 @@
 package io.openems.edge.pvinverter.opendtu;
 
+import java.util.HashSet;
+import java.util.Set;
+import java.util.function.Consumer;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.openems.common.exceptions.OpenemsException;
-import io.openems.edge.bridge.http.api.BridgeHttp;
 import io.openems.edge.meter.api.SinglePhase;
+import io.openems.edge.pvinverter.opendtu.api.OpenDTUCommunication;
 import io.openems.edge.pvinverter.opendtu.model.InverterResponse;
 import io.openems.edge.pvinverter.opendtu.model.InverterUnit;
 import io.openems.edge.pvinverter.opendtu.model.InverterValue;
 import io.openems.edge.pvinverter.opendtu.model.InverterValueInteger;
 import io.openems.edge.pvinverter.opendtu.model.InverterValueLong;
 import io.openems.edge.pvinverter.opendtu.model.OpenDTUInverterLimitModel;
-import io.openems.edge.pvinverter.opendtu.model.OpenDTUInverterLimitModel.InverterLimit;
 import io.openems.edge.pvinverter.opendtu.model.OpenDTUInverterLimitModel.InverterSetLimit;
 import io.openems.edge.pvinverter.opendtu.model.OpenDTUInverterPhase;
 import io.openems.edge.pvinverter.opendtu.model.OpenDTUModel;
 import io.openems.edge.pvinverter.opendtu.model.OpenDTUModel.AC;
 import io.openems.edge.pvinverter.opendtu.model.OpenDTUModel.OpenDTUInverterModel;
-import io.openems.edge.pvinverter.opendtu.util.OpenDTUConverter;
 
 public class OpenDTUInverter {
 
-	private final Logger logger = LoggerFactory.getLogger(OpenDTUInverter.class);
-	private final OpenDtuEndpoints apiEndpoints;
-	private final Config config;
-	private final Object inverterLock = new Object();
-	private OpenDTUInverterModel inverterModel;
-	private final Object limitLock = new Object();
-	private InverterLimit inverterLimit;
-	private BridgeHttp httpBridge;
-	private final OpenDTUConverter converter;
-	private boolean limitPending;
+	public interface OpenDTUInverterObserver {
+		public void update(OpenDTUInverterEvent event, OpenDTUInverter inverter);
+	}
 
-	public OpenDTUInverter(Config config, OpenDTUConverter converter) {
+	public enum OpenDTUInverterEvent {
+		DATA_UPDATE, LIMIT_UPDATE
+	}
+
+	private final Logger logger = LoggerFactory.getLogger(OpenDTUInverter.class);
+	private final Config config;
+	private Object inverterModelLock = new Object();
+	private Set<OpenDTUInverterObserver> observer;
+	private OpenDTUInverterModel inverterModel;
+	private OpenDTUInverterLimit inverterLimit;
+	private OpenDTUCommunication communication;
+	private int cycle;
+
+	public OpenDTUInverter(Config config, OpenDTUCommunication communication) {
 		this.config = config;
-		this.converter = converter;
-		this.apiEndpoints = new OpenDtuEndpoints(config);
+		this.communication = communication;
+		this.inverterLimit = new OpenDTUInverterLimit();
+		this.observer = new HashSet<>();
 	}
 
 	public void init() {
@@ -44,9 +53,21 @@ public class OpenDTUInverter {
 	}
 
 	public boolean isInitialized() {
-		synchronized (inverterLock) {
+		synchronized (inverterModelLock) {
 			return this.inverterModel != null;
 		}
+	}
+
+	public void register(OpenDTUInverterObserver o) {
+		this.observer.add(o);
+	}
+
+	public void unregister(OpenDTUInverterObserver o) {
+		this.observer.remove(o);
+	}
+
+	private void notiyObserver(final OpenDTUInverterEvent event) {
+		this.observer.stream().forEach(o -> o.update(event, this));
 	}
 
 	public void update(OpenDTUModel inverterModel) {
@@ -54,14 +75,13 @@ public class OpenDTUInverter {
 		if (inverterModel == null)
 			return;
 		var inverter = inverterModel.getInverter(this.config.inverterSerial());
-		if (inverter != null) {
-			synchronized (inverterLock) {
-				logger.debug("update OpenDTUModel: Inverter {}", inverter);
-				this.inverterModel = inverter;
-			}
-		} else {
-			logger.warn("no data for inverter " + this.config.inverterSerial());
+		if (inverter == null)
+			return;
+		logger.debug("update OpenDTUModel: Inverter {}", inverter);
+		synchronized (inverterModelLock) {
+			this.inverterModel = inverter;
 		}
+		notiyObserver(OpenDTUInverterEvent.DATA_UPDATE);
 	}
 
 	public void update(InverterResponse response) {
@@ -69,6 +89,7 @@ public class OpenDTUInverter {
 			requestActPowerLimit();
 		} else {
 			logger.warn("inverter set limit failed");
+			this.inverterLimit.update(null);
 		}
 	}
 
@@ -77,33 +98,29 @@ public class OpenDTUInverter {
 		if (inverterLimitModel == null)
 			return;
 		var inverterLimit = inverterLimitModel.getInverterLimit(this.config.inverterSerial());
-		if (inverterLimit != null) {
-			synchronized (limitLock) {
-				logger.debug("update OpenDTUInverterLimitModel: Inverter {}", inverterLimit);
-				this.inverterLimit = inverterLimit;
-			}
-		} else {
-			logger.warn("no limitdata for inverter " + this.config.inverterSerial());
-		}
-		setLimitPending(false);
+		if (inverterLimit == null)
+			return;
+
+		logger.debug("update OpenDTUInverterLimitModel: Inverter {}", inverterLimit);
+		this.inverterLimit.update(inverterLimit);
 	}
 
 	private boolean hasSinglePhase() {
-		synchronized (inverterLock) {
+		synchronized (inverterModelLock) {
 			return (this.inverterModel != null && this.inverterModel.getAc().size() == 1);
 		}
 	}
 
 	private boolean hasThreePhase() {
-		synchronized (inverterLock) {
+		synchronized (inverterModelLock) {
 			return (this.inverterModel != null && this.inverterModel.getAc().size() == 3);
 		}
 	}
 
 	public OpenDTUInverterPhase getPhase(SinglePhase phase) throws OpenemsException {
-		synchronized (inverterLock) {
-			if (!isInitialized())
-				return null;
+		if (!isInitialized())
+			return null;
+		synchronized (inverterModelLock) {
 			if (hasThreePhase()) {
 				switch (phase) {
 				case L1:
@@ -136,56 +153,17 @@ public class OpenDTUInverter {
 				ac.getPowerFactor(), ac.getReactivPower(), new InverterValueLong(energy, InverterUnit.Wh, 1));
 	}
 
-	public Integer getActiveLimit() {
-		synchronized (limitLock) {
-			if (this.inverterLimit != null) {
-				return this.inverterLimit.getLimitRelative();
-			}
-		}
-		return null;
-	}
-
-	@SuppressWarnings("rawtypes")
-	public InverterValue getMaxPower() {
-		synchronized (limitLock) {
-			if (this.inverterLimit != null) {
-				return new InverterValueInteger(this.inverterLimit.getMaxPower(), InverterUnit.W, 1);
-			}
-		}
-		return null;
-	}
-
-	public void setBridgeHttp(BridgeHttp httpBridge) {
-		this.httpBridge = httpBridge;
-	}
-
-	public void unsetBridgeHttp(BridgeHttp httpBridge) {
-		// do some cleanup?
-		this.httpBridge = null;
+	public OpenDTUInverterLimit getInverterLimit() {
+		return this.inverterLimit;
 	}
 
 	private void startPolling() {
-		this.httpBridge.subscribeJsonCycle(config.cycleInterval(),
-				this.apiEndpoints.getInverterLiveDataEndpoint(this.config.inverterSerial()).toEndpoint().url(),
-				(json, ex) -> {
-					if (ex == null) {
-						update(this.converter.toInverterModel(json));
-					} else {
-						logger.error("getInverterLiveData:", ex);
-						update((OpenDTUModel) null);
-					}
-				});
+		this.communication.requestInverterData(this::update);
 	}
 
 	private void requestActPowerLimit() {
-		this.httpBridge.requestJson(this.apiEndpoints.getLimitEndpoint().toEndpoint()).whenComplete((json, ex) -> {
-			if (ex == null) {
-				update(this.converter.toInverterLimitModel(json));
-			} else {
-				logger.error("getInverterLimit:", ex);
-				update((OpenDTUInverterLimitModel) null);
-			}
-		});
+		this.logger.debug("request active power limit");
+		this.communication.requestInverterLimitData(this::update);
 	}
 
 	/**
@@ -193,26 +171,16 @@ public class OpenDTUInverter {
 	 * 
 	 * @param value (0 - 100)
 	 */
-	public void setLimit(Integer value) {
+	public void setLimit(Integer value, Consumer<OpenDTUInverterLimit> callback) {
 		logger.debug("setLimit: {}%", value);
-
-		if (!isLimitPending()) {
-			setLimitPending(true);
-			var limit = new InverterSetLimit(this.config.inverterSerial());
-			limit.setLimit_value(toLimit(value));
-			var endpoint = this.apiEndpoints.getLimitSetEndpoint().setBody(this.converter.toInverterLimitJson(limit))
-					.toEndpoint();
-			this.httpBridge.requestJson(endpoint).whenComplete((json, ex) -> {
-				if (ex == null) {
-					update(this.converter.toInverterSetLimitResponse(json));
-				} else {
-					update((InverterResponse) null);
-					logger.error("setInverterLimit:", ex);
-				}
-			});
-		} else {
-			logger.warn("limit request pending");
+		if (this.inverterLimit.isPending()) {
+			logger.warn("limit request pending - no new request possible");
+			return;
 		}
+		this.inverterLimit.addStatusCallback(callback);
+		var limit = new InverterSetLimit(this.config.inverterSerial());
+		limit.setLimit_value(toLimit(value));
+		this.communication.setInverterLimit(limit, this::update);
 	}
 
 	private int toLimit(Integer value) {
@@ -222,14 +190,6 @@ public class OpenDTUInverter {
 		if (intLimit > 100)
 			intLimit = 100;
 		return intLimit;
-	}
-
-	private void setLimitPending(boolean b) {
-		this.limitPending = b;
-	}
-
-	private boolean isLimitPending() {
-		return this.limitPending;
 	}
 
 	public void start() {
@@ -244,7 +204,7 @@ public class OpenDTUInverter {
 	 */
 	@SuppressWarnings("rawtypes")
 	public InverterValue getPower() {
-		synchronized (inverterLock) {
+		synchronized (inverterModelLock) {
 			if (this.inverterModel != null) {
 				int power = 0;
 				for (var ac : this.inverterModel.getAc()) {
@@ -261,6 +221,7 @@ public class OpenDTUInverter {
 			}
 		}
 		return null;
+
 	}
 
 	/**
@@ -270,7 +231,7 @@ public class OpenDTUInverter {
 	 */
 	@SuppressWarnings("rawtypes")
 	public InverterValue getProductionEnergy() {
-		synchronized (inverterLock) {
+		synchronized (inverterModelLock) {
 			if (this.inverterModel != null) {
 				// not sure about this ...
 				long energy = 0;
@@ -288,10 +249,31 @@ public class OpenDTUInverter {
 			}
 		}
 		return null;
+
 	}
 
 	public void stop() {
 		logger.warn("stop() -> do cleanup");
+	}
+
+	public String getSerial() {
+		synchronized (inverterModelLock) {
+			return this.inverterModel == null ? null : this.inverterModel.getSerial();
+		}
+	}
+
+	public void cycle() {
+		if (nextCycle() == 0) {
+			if (this.inverterLimit.isPending()) {
+				requestActPowerLimit();
+			}
+		}
+	}
+
+	private int nextCycle() {
+		cycle++;
+		cycle %= this.config.cycleInterval();
+		return cycle;
 	}
 
 }

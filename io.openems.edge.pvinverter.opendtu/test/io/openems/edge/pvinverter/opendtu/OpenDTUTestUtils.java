@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 
 import io.openems.common.utils.JsonUtils;
@@ -77,7 +78,8 @@ public class OpenDTUTestUtils {
 			public final Map<String, JsonObject> jsonResponses = new HashMap<>();
 			{
 				jsonResponses.put(toKey(endpoints.getLimitEndpoint().toEndpoint()), limitJson);
-				jsonResponses.put(toKey(endpoints.getLimitSetEndpoint().toEndpoint()), createLimitResponse(true));
+				jsonResponses.put(toKey(endpoints.getLimitSetEndpoint((String) null).toEndpoint()),
+						createLimitResponse(true));
 			}
 			public final Map<String, CycleEndpoint> cycleEndpoints = new HashMap<>();
 
@@ -103,10 +105,10 @@ public class OpenDTUTestUtils {
 			}
 
 			@Override
-			public CompletableFuture<String> request(Endpoint endpoint) {
+			public CompletableFuture<JsonElement> requestJson(Endpoint endpoint) {
 				JsonObject response = this.jsonResponses.get(toKey(endpoint));
 				if (response != null) {
-					return CompletableFuture.completedFuture(response.toString());
+					return CompletableFuture.completedFuture(response);
 				} else {
 					return null;
 				}
@@ -115,6 +117,12 @@ public class OpenDTUTestUtils {
 			@Override
 			protected void setResponse(Endpoint endpoint, JsonObject responseJson) {
 				this.jsonResponses.put(toKey(endpoint), responseJson);
+			}
+
+			@Override
+			public CompletableFuture<String> request(Endpoint endpoint) {
+				// TODO Auto-generated method stub
+				return null;
 			}
 
 		};
@@ -133,6 +141,10 @@ public class OpenDTUTestUtils {
 		String json = "{\n" + "  \"" + this.config.inverterSerial() + "\": {\n" + "    \"limit_relative\": " + i + ",\n"
 				+ "    \"max_power\": 1500,\n" + "    \"limit_set_status\": \"Ok\"\n" + "  }\n" + "}";
 		return JsonUtils.parse(json).getAsJsonObject();
+	}
+
+	public Endpoint getInverterLimitSetEndoint() {
+		return this.endpoints.getLimitSetEndpoint((String) null).toEndpoint();
 	}
 
 }

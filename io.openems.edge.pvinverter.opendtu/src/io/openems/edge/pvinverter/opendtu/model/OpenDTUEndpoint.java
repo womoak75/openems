@@ -10,7 +10,16 @@ public class OpenDTUEndpoint {
 	private String body;
 
 	public OpenDTUEndpoint(Endpoint endpoint) {
+		this(endpoint, (String) null);
+	}
+
+	public OpenDTUEndpoint(Endpoint endpoint, JsonObject json) {
+		this(endpoint, json.toString());
+	}
+
+	public OpenDTUEndpoint(Endpoint endpoint, String body) {
 		this.endpoint = endpoint;
+		this.body = body;
 	}
 
 	public OpenDTUEndpoint setBody(String body) {

@@ -103,4 +103,9 @@ public class InverterValue<T extends Number> {
 		}
 	}
 
+	@Override
+	public String toString() {
+		return "InverterValue [" + value + " " + unit + (max != null ? ", max=" + max : "") + ", d=" + d + "]";
+	}
+
 }

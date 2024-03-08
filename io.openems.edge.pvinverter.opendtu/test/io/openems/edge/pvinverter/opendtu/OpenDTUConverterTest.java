@@ -10,6 +10,7 @@ import io.openems.common.exceptions.OpenemsError.OpenemsNamedException;
 import io.openems.common.utils.JsonUtils;
 import io.openems.edge.pvinverter.opendtu.model.InverterUnit;
 import io.openems.edge.pvinverter.opendtu.model.InverterValueDouble;
+import io.openems.edge.pvinverter.opendtu.model.OpenDTUInverterLimitModel.InverterLimit.InverterLimitStatus;
 import io.openems.edge.pvinverter.opendtu.model.OpenDTUInverterLimitModel.InverterSetLimit;
 import io.openems.edge.pvinverter.opendtu.model.OpenDTUInverterLimitModel.InverterSetLimit.LimitType;
 import io.openems.edge.pvinverter.opendtu.util.OpenDTUConverter;;
@@ -180,7 +181,7 @@ public class OpenDTUConverterTest {
 		var json = "{\n" + "  \"116666666666\": {\n" + "    \"limit_relative\": 40,\n" + "    \"max_power\": 1500,\n"
 				+ "    \"limit_set_status\": \"Ok\"\n" + "  },\n" + "  \"112666666666\": {\n"
 				+ "    \"limit_relative\": 100,\n" + "    \"max_power\": 350,\n"
-				+ "    \"limit_set_status\": \"NotOk\"\n" + "  }\n" + "}";
+				+ "    \"limit_set_status\": \"Failure\"\n" + "  }\n" + "}";
 		var jsonObj = JsonUtils.parse(json);
 		var converter = new OpenDTUConverter();
 		var model = converter.toInverterLimitModel(jsonObj);
@@ -188,14 +189,14 @@ public class OpenDTUConverterTest {
 		assertEquals(2, model.getInverterLimits().size());
 
 		var hm1500 = model.getInverterLimit("116666666666");
-		assertEquals(40, hm1500.getLimitRelative());
-		assertEquals(1500, hm1500.getMaxPower());
-		assertTrue(hm1500.isLimitSetStatus());
+		assertEquals(40, hm1500.getLimitRelative().intValue());
+		assertEquals(1500, hm1500.getMaxPower().intValue());
+		assertEquals(InverterLimitStatus.Ok, hm1500.getLimitSetStatus());
 
 		var hm350 = model.getInverterLimit("112666666666");
-		assertEquals(100, hm350.getLimitRelative());
-		assertEquals(350, hm350.getMaxPower());
-		assertFalse(hm350.isLimitSetStatus());
+		assertEquals(100, hm350.getLimitRelative().intValue());
+		assertEquals(350, hm350.getMaxPower().intValue());
+		assertEquals(InverterLimitStatus.Failure, hm350.getLimitSetStatus());
 	}
 
 	@Test
@@ -204,7 +205,7 @@ public class OpenDTUConverterTest {
 		var converter = new OpenDTUConverter();
 		var json = converter.toInverterLimitJson(model);
 
-		assertEquals("116666666666", json.get("serial").getAsString());
+		assertEquals(116666666666l, json.get("serial").getAsLong());
 		assertEquals(100, json.get("limit_value").getAsInt());
 		assertEquals(LimitType.RelativNonPersistent.toLimit(), json.get("limit_type").getAsInt());
 

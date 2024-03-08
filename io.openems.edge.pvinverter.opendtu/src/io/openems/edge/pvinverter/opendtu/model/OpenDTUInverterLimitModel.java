@@ -22,11 +22,15 @@ public class OpenDTUInverterLimitModel {
 			private int t;
 		}
 
-		private String serial;
+		private long serial;
 		private LimitType limit_type;
 		private int limit_value;
 
 		public InverterSetLimit(String serial) {
+			this(Long.parseLong(serial));
+		}
+
+		public InverterSetLimit(long serial) {
 			this.serial = serial;
 			this.limit_type = LimitType.RelativNonPersistent;
 			this.limit_value = 100;
@@ -48,18 +52,23 @@ public class OpenDTUInverterLimitModel {
 			this.limit_value = limit_value;
 		}
 
-		public String getSerial() {
+		public long getSerial() {
 			return serial;
 		}
 	}
 
 	public static class InverterLimit {
-		private String serial;
-		private int limitRelative;
-		private int maxPower;
-		private boolean limitSetStatus;
+		public enum InverterLimitStatus {
+			Unknown, Ok, Pending, Failure
+		};
 
-		public InverterLimit(String serial, int limitRelative, int maxPower, boolean limitSetStatus) {
+		private String serial;
+		private Integer limitRelative;
+		private Integer maxPower;
+		private InverterLimitStatus limitSetStatus;
+
+		public InverterLimit(String serial, Integer limitRelative, Integer maxPower,
+				InverterLimitStatus limitSetStatus) {
 			this.serial = serial;
 			this.limitRelative = limitRelative;
 			this.maxPower = maxPower;
@@ -74,28 +83,34 @@ public class OpenDTUInverterLimitModel {
 			this.serial = serial;
 		}
 
-		public int getLimitRelative() {
+		public Integer getLimitRelative() {
 			return limitRelative;
 		}
 
-		public void setLimitRelative(int limitRelative) {
+		public void setLimitRelative(Integer limitRelative) {
 			this.limitRelative = limitRelative;
 		}
 
-		public int getMaxPower() {
+		public Integer getMaxPower() {
 			return maxPower;
 		}
 
-		public void setMaxPower(int maxPower) {
+		public void setMaxPower(Integer maxPower) {
 			this.maxPower = maxPower;
 		}
 
-		public boolean isLimitSetStatus() {
+		public InverterLimitStatus getLimitSetStatus() {
 			return limitSetStatus;
 		}
 
-		public void setLimitSetStatus(boolean limitSetStatus) {
+		public void setLimitSetStatus(InverterLimitStatus limitSetStatus) {
 			this.limitSetStatus = limitSetStatus;
+		}
+
+		@Override
+		public String toString() {
+			return "InverterLimit [serial=" + serial + ", limitRelative=" + limitRelative + ", maxPower=" + maxPower
+					+ ", limitSetStatus=" + limitSetStatus + "]";
 		}
 
 	}
@@ -120,6 +135,11 @@ public class OpenDTUInverterLimitModel {
 	public void setInverterLimits(Map<String, InverterLimit> inverterLimits) {
 		this.inverterLimits.clear();
 		this.inverterLimits.putAll(inverterLimits);
+	}
+
+	@Override
+	public String toString() {
+		return "OpenDTUInverterLimitModel [inverterLimits=" + inverterLimits + "]";
 	}
 
 }

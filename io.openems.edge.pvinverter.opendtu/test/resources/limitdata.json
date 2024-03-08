@@ -7,6 +7,6 @@
   "112666666666": {
     "limit_relative": 100,
     "max_power": 350,
-    "limit_set_status": "NotOk"
+    "limit_set_status": "Ok"
   }
 }

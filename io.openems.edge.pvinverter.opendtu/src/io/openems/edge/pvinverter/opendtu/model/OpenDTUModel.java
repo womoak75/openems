@@ -120,6 +120,15 @@ public class OpenDTUModel {
 		public void setInv(INV inv) {
 			this.inv = inv;
 		}
+
+		@Override
+		public String toString() {
+			return "OpenDTUInverterModel [name=" + name + ", serial=" + serial + ", order=" + order + ", dataAge="
+					+ dataAge + ", pollEnabled=" + pollEnabled + ", reachable=" + reachable + ", producing=" + producing
+					+ ", limitRelative=" + limitRelative + ", limitAbsolute=" + limitAbsolute + ", ac=" + ac + ", dc="
+					+ dc + ", inv=" + inv + "]";
+		}
+
 	}
 
 	public static class AC {
@@ -191,6 +200,13 @@ public class OpenDTUModel {
 
 		public void setReactivPower(InverterValueDouble reactivPower) {
 			this.reactivPower = reactivPower;
+		}
+
+		@Override
+		public String toString() {
+			return "AC [nr=" + nr + ", power=" + power + ", voltage=" + voltage + ", current=" + current
+					+ ", frequency=" + frequency + ", powerFactor=" + powerFactor + ", reactivPower=" + reactivPower
+					+ "]";
 		}
 
 	}
@@ -268,6 +284,14 @@ public class OpenDTUModel {
 		public void setIrradiation(InverterValueDouble irradiation) {
 			this.irradiation = irradiation;
 		}
+
+		@Override
+		public String toString() {
+			return "DC [nr=" + nr + ", name=" + name + ", power=" + power + ", voltage=" + voltage + ", current="
+					+ current + ", yieldDay=" + yieldDay + ", yieldTotal=" + yieldTotal + ", irradiation=" + irradiation
+					+ "]";
+		}
+
 	}
 
 	public static class INV {
@@ -316,6 +340,13 @@ public class OpenDTUModel {
 		public void setPowerDc(InverterValueDouble powerDc) {
 			this.powerDc = powerDc;
 		}
+
+		@Override
+		public String toString() {
+			return "INV [yieldDay=" + yieldDay + ", yieldTotal=" + yieldTotal + ", temperature=" + temperature
+					+ ", efficiency=" + efficiency + ", powerDc=" + powerDc + "]";
+		}
+
 	}
 
 	public static class Total {
@@ -346,6 +377,12 @@ public class OpenDTUModel {
 		public void setPower(InverterValueDouble power) {
 			this.power = power;
 		}
+
+		@Override
+		public String toString() {
+			return "Total [yieldDay=" + yieldDay + ", yieldTotal=" + yieldTotal + ", power=" + power + "]";
+		}
+
 	}
 
 	public static class Hints {
@@ -375,6 +412,12 @@ public class OpenDTUModel {
 
 		public void setDefaultPassword(boolean default_password) {
 			this.default_password = default_password;
+		}
+
+		@Override
+		public String toString() {
+			return "Hints [time_sync=" + time_sync + ", radio_problem=" + radio_problem + ", default_password="
+					+ default_password + "]";
 		}
 
 	}
@@ -414,6 +457,11 @@ public class OpenDTUModel {
 
 	public void setHints(Hints hints) {
 		this.hints = hints;
+	}
+
+	@Override
+	public String toString() {
+		return "OpenDTUModel [inverters=" + inverters + ", total=" + total + ", hints=" + hints + "]";
 	}
 
 }

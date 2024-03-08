@@ -16,7 +16,7 @@ public class OpenDtuEndpoints {
 	private int port;
 	private String schema;
 	private int connectTimeout;
-	private int readTimeoute;
+	private int readTimeout;
 	private String user;
 	private String pass;
 	private Config config;
@@ -46,7 +46,7 @@ public class OpenDtuEndpoints {
 
 	public OpenDTUEndpoint getInverterListEndpoint() {
 		return new OpenDTUEndpoint(new Endpoint(getBaseUrl() + "/api/inverter/list", HttpMethod.GET,
-				this.connectTimeout, this.readTimeoute, null, authPropertiesMap()));
+				this.connectTimeout, this.readTimeout, null, authPropertiesMap()));
 	}
 
 	public String getInverterLiveDataUrl(String inverterId) {
@@ -59,21 +59,21 @@ public class OpenDtuEndpoints {
 
 	public OpenDTUEndpoint getInverterLiveDataEndpoint(String inverterId) {
 		return new OpenDTUEndpoint(new Endpoint(getInverterLiveDataUrl(inverterId), HttpMethod.GET, this.connectTimeout,
-				this.readTimeoute, null, propertiesMap()));
+				this.readTimeout, null, propertiesMap()));
 	}
 
 	public OpenDTUEndpoint getLimitEndpoint() {
 		return new OpenDTUEndpoint(new Endpoint(getBaseUrl() + "/api/limit/status", HttpMethod.GET, this.connectTimeout,
-				this.readTimeoute, null, authPropertiesMap()));
-	}
-
-	public OpenDTUEndpoint getLimitSetEndpoint() {
-		return getInverterLiveDataEndpoint(null);
+				this.readTimeout, null, authPropertiesMap()));
 	}
 
 	public OpenDTUEndpoint getLimitSetEndpoint(final JsonObject jsonObject) {
+		return getLimitSetEndpoint(jsonObject.toString());
+	}
+
+	public OpenDTUEndpoint getLimitSetEndpoint(final String body) {
 		return new OpenDTUEndpoint(new Endpoint(getBaseUrl() + "/api/limit/config", HttpMethod.POST,
-				this.connectTimeout, this.readTimeoute, jsonObject.toString(), authPropertiesMap()));
+				this.connectTimeout, this.readTimeout, body, authPropertiesMap()), body);
 	}
 
 	private Map<String, String> authPropertiesMap() {
